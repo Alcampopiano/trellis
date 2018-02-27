@@ -98,7 +98,7 @@ def nb2pdf(proj_path, nb):
    # pandocs to convert latex to pdf
    call('pandoc ' + nb[0:-6] + '.tex -o ' + nb[0:-6] + '.pdf')
 
-def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, toPDF=False, toHTML=False):
+def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, path_to_jup, toPDF=False, toHTML=False):
 
     """
     Search batch compatible notebook for {{}}=type strings, when found, replace them with strings from a dataframe (CSV). Column headers in df are given without {{}},
@@ -110,6 +110,8 @@ def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, toPDF=False, toHT
     :param append_ind: numerical index of the column in main df (toStrings_fname.csv) to use for getting strings to append to output file names
     :param toPDF: True or False
     :param toHTML: True or False
+    :param path_to_jup: path to jupyter (eg /home/allan/anaconda3/bin/jupyter -> which jupyter into a terminal),
+           stop gap measure becasue of pycharm path choices, eg /usr/local/bin/charm
     :return:
     """
 
@@ -157,8 +159,8 @@ def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, toPDF=False, toHT
 
         #print(nb_fname, newStr)
         #os.system('jupyter nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
-        exstr='/home/allan/anaconda3/bin/jupyterjupyter nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
-        print(exstr)
+        exstr=path_to_jup + ' nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
+        #print(exstr)
         call(exstr, shell=True, executable='/bin/bash')
 
         if toPDF:
@@ -167,8 +169,8 @@ def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, toPDF=False, toHT
         if toHTML:
             #os.system('jupyter nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
 
-            exstr='jupyter nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
-            print(exstr)
+            exstr='path_to_jup nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
+            #print(exstr)
             call(exstr,
                  shell=True, executable='/bin/bash')
 
