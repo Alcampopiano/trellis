@@ -24,13 +24,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import os
 import sqlite3
-from subprocess import call
+from subprocess import call, Popen, PIPE
 import re
 import csv
 import glob
 from IPython.display import Markdown
 from scipy import stats
-
 
 def saveSwapFile(destPath, destFname, srcPath, srcFname, col_name, show=True):
 
@@ -156,13 +155,22 @@ def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, toPDF=False, toHT
         f.write(text)
         f.close()
 
-        os.system('jupyter nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
+        #print(nb_fname, newStr)
+        #os.system('jupyter nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
+        exstr='/home/allan/anaconda3/bin/jupyterjupyter nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
+        print(exstr)
+        call(exstr, shell=True, executable='/bin/bash')
 
         if toPDF:
             nb2pdf(fpath, nb_fname[0:-6] + '_' + newStr + '.ipynb')
 
         if toHTML:
-            os.system('jupyter nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
+            #os.system('jupyter nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
+
+            exstr='jupyter nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
+            print(exstr)
+            call(exstr,
+                 shell=True, executable='/bin/bash')
 
 def fillDatabase(fname_path, db_path, db_name, if_exists='replace'):
 
@@ -441,19 +449,20 @@ def readConfig(conf, defaults=None):
 def plotBar(df, conf, fig, xtext=False, pos=111):
 
     # shape of dataframe
-    nrow, ncol = df.shape
+    nrow=df.shape[0]
 
     # get y
     if nrow == 1:
 
-        y=df.values.tolist()[0]
+        y=df.values[0]
 
     # allow df to be n rows and 1 column
     elif nrow > 1:
 
         # rearrange row oriented df into a list
-        y = list(np.array(df)[:, 0])
+        #y = list(np.array(df)[:, 0])
         #y=df.values.tolist()[0]
+        y = df.values[:, 0]
 
     x = range(len(y))
 
@@ -478,6 +487,8 @@ def plotBar(df, conf, fig, xtext=False, pos=111):
     else:
         plt.xticks(x, conf['xticks'], fontsize=conf['xtick_fontsize'], rotation=conf['rotate_xticks'])
 
+    if conf['ylim']:
+        plt.ylim(conf['ylim'][0], conf['ylim'][1])
 
     plt.bar(x, y, width, color=conf['color'])
 
@@ -878,7 +889,7 @@ def benchMark(conf,x,y):
     if type(conf['bench_data']) is not list:
         conf['bench_data']=[conf['bench_data']]*len(y)
 
-    plt.plot(x, conf['bench_data'], '-o', color=conf['bench_color'], lw=2)
+    plt.plot(x, conf['bench_data'], '-', color=conf['bench_color'], lw=2)
 
     if 'bench_text' in conf:
         plt.text(x[-1], conf['bench_data'][-1], conf['bench_text'], color=conf['bench_color'],
@@ -889,7 +900,7 @@ def ytext(xrow,yrow,conf, alternative_ylocs=None):
     """
     :param xrow: row of x indices
     :param yrow: row of numerical yvals
-    :param conf: configuration yaml
+    :param conf: configuration
     :param alternative_ylocs: positions for the labels that are different from the data array
     :return: A text object that can offer set and get
 
