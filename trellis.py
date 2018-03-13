@@ -17,11 +17,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
-import imageio
-images = []
-for filename in filenames:
-    images.append(imageio.imread(filename))
-imageio.mimsave('/path/to/movie.gif', images)
 
 import yaml
 import pandas as pd
