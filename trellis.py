@@ -17,7 +17,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
+import imageio
+images = []
+for filename in filenames:
+    images.append(imageio.imread(filename))
+imageio.mimsave('/path/to/movie.gif', images)
 
+import yaml
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -265,7 +271,7 @@ def runQuery(query, connect, axis=0, show=False, join_on=False):
 
     return df
 
-def makeFig(df, conf, fig=None, defaults=None, xtext=False, legtext=False, pos=111):
+def makeFig(df, conf, fig=None, defaults=None, legtext=False, pos=111):
 
     # merge with possible python dict
     if defaults:
@@ -285,10 +291,10 @@ def makeFig(df, conf, fig=None, defaults=None, xtext=False, legtext=False, pos=1
 
     # figure options
     if conf['chart'] == 'bar':
-        plotBar(df, conf, fig, xtext=xtext)
+        plotBar(df, conf, fig, pos=pos)
 
     if conf['chart'] == 'line':
-        y_text_obj=plotLine(df, conf, fig, pos=pos, xtext=xtext)
+        y_text_obj=plotLine(df, conf, fig, pos=pos)
 
     if conf['chart'] == 'scatter':
         plotScatter(df, conf, fig, pos=pos)
@@ -298,13 +304,13 @@ def makeFig(df, conf, fig=None, defaults=None, xtext=False, legtext=False, pos=1
         #fig = plotClustBar(df, conf, fig, pos=pos, legtext=legtext)
 
     if conf['chart'] == 'stacked_bar':
-        y_text_obj=plotStackedBar(df, conf, fig, pos=pos, xtext=xtext)
+        y_text_obj=plotStackedBar(df, conf, fig, pos=pos)
 
     # return fig object
     return y_text_obj
 
-def makeSubFig(df_list, dict_list, pos_list, defaults=None, xtext_list=False, legtext_list=False):
-
+def makeSubFig(df_list, dict_list, pos_list, defaults=None, legtext_list=False):
+    #makeSubFig(df_list, dict_list, pos_list, defaults=None, xtext_list=False, legtext_list=False)
 
     """
     give lists of dataframes, yaml configs, subplot positions, etc...
@@ -314,7 +320,6 @@ def makeSubFig(df_list, dict_list, pos_list, defaults=None, xtext_list=False, le
     :param dict_list:
     :param pos_list:
     :param defaults:
-    :param xtext_list:
     :param legtext_list:
     :param legtext_list:
     :return:
@@ -335,12 +340,15 @@ def makeSubFig(df_list, dict_list, pos_list, defaults=None, xtext_list=False, le
     fig.suptitle(conf['par_title'], fontsize=conf['par_title_fontsize'], y=.98+(conf['par_title_pad']/m))
     plt.xlabel(conf['par_xlabel'], fontsize=conf['par_xlabel_fontsize'], labelpad=conf['par_xlabel_pad'])
     plt.ylabel(conf['par_ylabel'], fontsize=conf['par_ylabel_fontsize'], labelpad=conf['par_ylabel_pad'])
-    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    #plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+
 
     res=[]
 
     for df, conf_dict, pos in zip(df_list, dict_list, pos_list):
-        res=makeFig(df, conf_dict, fig=fig, defaults=defaults, pos=pos, xtext=xtext_list, legtext=legtext_list)
+        res=makeFig(df, conf_dict, fig=fig, defaults=defaults, pos=pos, legtext=legtext_list)
+        #res = makeFig(df, conf_dict, fig=fig, defaults=defaults, pos=pos, xtext=xtext_list, legtext=legtext_list)
 
     # add a super legend to the canvas
     legpatch=[]
@@ -431,7 +439,8 @@ def readConfig(conf, defaults=None):
             bold_y_gridline=False,
             regline_color='red',
             ols=False,
-            ols_text=True
+            ols_text=True,
+            marker_alpha=.5
         )
 
         # give configuration some standard defaults
@@ -448,7 +457,7 @@ def readConfig(conf, defaults=None):
 
     return conf
 
-def plotBar(df, conf, fig, xtext=False, pos=111):
+def plotBar(df, conf, fig, pos=111):
 
     # shape of dataframe
     nrow=df.shape[0]
@@ -484,7 +493,7 @@ def plotBar(df, conf, fig, xtext=False, pos=111):
     plt.title(conf['title'], fontsize=conf['title_fontsize'])
 
     if conf['xsep']:
-        xticks=addXText(conf, xtext)
+        xticks=addXText(conf, conf['xtext'])
         plt.xticks(x, xticks, fontsize=conf['xtick_fontsize'], rotation=conf['rotate_xticks'])
     else:
         plt.xticks(x, conf['xticks'], fontsize=conf['xtick_fontsize'], rotation=conf['rotate_xticks'])
@@ -600,7 +609,7 @@ def plotClustBar(df, conf, fig, legtext=False, pos=111):
     #print(fig)
     #return fig
 
-def plotLine(df, conf, fig, xtext=False, pos=111):
+def plotLine(df, conf, fig, pos=111):
 
     y = df.values # np array
 
@@ -648,7 +657,7 @@ def plotLine(df, conf, fig, xtext=False, pos=111):
 
 
     if conf['xsep']:
-        xticks=addXText(conf, xtext)
+        xticks=addXText(conf, conf['xtext'])
         plt.xticks(x, xticks, fontsize=conf['xtick_fontsize'], rotation=conf['rotate_xticks'])
     else:
         plt.xticks(x, conf['xticks'], fontsize=conf['xtick_fontsize'], rotation=conf['rotate_xticks'])
@@ -745,23 +754,42 @@ def plotScatter(df, conf, fig, pos=111):
 
     ax.set_axisbelow(True)
     ax.yaxis.set_tick_params(labelsize=conf['ytick_fontsize'])
+    ax.xaxis.set_tick_params(labelsize=conf['xtick_fontsize'])
 
     plt.grid(axis=conf['grid'])
 
     # figure options
     plt.xlabel(conf['xlabel'], fontsize=conf['label_fontsize'])
     plt.ylabel(conf['ylabel'], fontsize=conf['label_fontsize'])
-    #print(conf['title'])
-    plt.title(conf['title'], fontsize=conf['title_fontsize'])
 
-    plt.scatter(x ,y, s=conf['marker_size'], c=conf['color'], alpha=.5)
+    if conf['yticks']=='':
+        conf['yticks']=[]
+        ax.set_yticklabels('')
+
+    else:
+        ax.set_yticks(conf['yticks'])
+        ax.set_yticklabels(conf['yticks'])
+
+    if conf['xticks']=='':
+        conf['xticks']=[]
+        ax.set_xticklabels('')
+
+    else:
+        ax.set_xticks(conf['xticks'])
+        ax.set_xticklabels(conf['xticks'])
+
+
+    plt.title(conf['title'], fontsize=conf['title_fontsize'])
+    plt.scatter(x ,y, s=conf['marker_size'], c=conf['color'], alpha=conf['marker_alpha'])
 
     # basic regression stats
     if conf['ols'] is True:
         slope, intercept, r_value, p_value, std_err = stats.linregress(x ,y)
+        #print(r_value, p_value)
 
-        slp = intercept + slope * np.array(x)
-        plt.plot([min(x),max(x)], [min(slp), max(slp)], color=conf['regline_color'], lw=conf['linewidth'])
+        #slp = intercept + slope * np.array(x)
+        plt.plot(np.unique(x), np.poly1d(np.polyfit(x, y, 1))(np.unique(x)), color=conf['regline_color'], lw=conf['linewidth'])
+        #plt.plot([min(x),max(x)], [min(slp), max(slp)], color=conf['regline_color'], lw=conf['linewidth'])
         # plt.plot(x,slp, color=conf['regline_color'], lw=conf['linewidth'])
 
         if conf['ols_text'] is True:
@@ -777,9 +805,11 @@ def plotScatter(df, conf, fig, pos=111):
                           verticalalignment=conf['text_vert_align'], horizontalalignment='left',
                           size=conf['text_fontsize'], style='italic')
 
+
+
     #return fig
 
-def plotStackedBar(df, conf, fig, xtext=False, pos=111):
+def plotStackedBar(df, conf, fig, pos=111):
 
     y = df.values  # np array
 
@@ -812,7 +842,7 @@ def plotStackedBar(df, conf, fig, xtext=False, pos=111):
     plt.title(conf['title'], fontsize=conf['title_fontsize'])
 
     if conf['xsep']:
-        xticks=addXText(conf, xtext)
+        xticks=addXText(conf, conf['xtext'])
         plt.xticks(range(len(conf['xticks'])), xticks, fontsize=conf['xtick_fontsize'], rotation=conf['rotate_xticks'])
     else:
         plt.xticks(range(len(conf['xticks'])), conf['xticks'], fontsize=conf['xtick_fontsize'], rotation=conf['rotate_xticks'])
@@ -891,11 +921,18 @@ def benchMark(conf,x,y):
     if type(conf['bench_data']) is not list:
         conf['bench_data']=[conf['bench_data']]*len(y)
 
-    plt.plot(x, conf['bench_data'], '-', color=conf['bench_color'], lw=2)
+    if type(conf['bench_leg_text']) is not list:
+        conf['bench_leg_text']=[conf['bench_leg_text']]
 
-    if 'bench_text' in conf:
+    #lobj=plt.plot(x, conf['bench_data'], '-', color=conf['bench_color'], lw=2)
+    lobj = plt.plot(x, conf['bench_data'], '-', color=conf['bench_color'], lw=2)
+
+    if conf['bench_text']:
         plt.text(x[-1], conf['bench_data'][-1], conf['bench_text'], color=conf['bench_color'],
                  verticalalignment=conf['bench_vert_align'], horizontalalignment='left', size=conf['bench_fontsize'], style='italic')
+
+    if conf['bench_legend']:
+        plt.legend(lobj, conf['bench_leg_text'], fontsize=conf['bench_fontsize'])
 
 def ytext(xrow,yrow,conf, alternative_ylocs=None):
 
@@ -974,72 +1011,6 @@ def ytext(xrow,yrow,conf, alternative_ylocs=None):
                 text_obj.append(th)
 
     return text_obj
-
-# def RepStrList(yam, qry, show=False, opts={}):
-#
-#     """
-#
-#     :param yam: yaml configuration (becomes dict) that holds the replacement strings
-#     :param qry: yaml configuration that gets duplicated, but with string replacements in it (from yam)
-#     :param show: print final list of strings
-#     :param opts: dictionary to merge with yaml - allowing pure python configuration on the way in
-#     :return: final list of replaced strings
-#     """
-#
-#     yam_struct = yaml.load(yam)
-#
-#     # merge with possible python dict
-#     if opts:
-#         yam_struct = {**opts, **yam_struct}
-#
-#     ks = list(yam_struct.keys())
-#
-#     # make single element lists into strings/numerical
-#     for k in ks:
-#         if len(yam_struct[k])==1 and type(yam_struct[k]) is list:
-#             yam_struct[k]=yam_struct[k][0]
-#
-#     # find longest list as this determines block size (number of text blobs)
-#     len_grab=[]
-#     for k in ks:
-#         if type(yam_struct[k]) is list:
-#             l=len(yam_struct[k])
-#             len_grab.append(l)
-#
-#     # if no list is present
-#     if not len_grab:
-#         max_yam=1
-#     else:
-#         max_yam = max(len_grab)
-#
-#     # if yaml field is not a list, replicate it as a list
-#     for k in ks:
-#         if type(yam_struct[k]) is not list:
-#             yam_struct[k]=[yam_struct[k]]*max_yam
-#
-#     block_len=max_yam
-#     qry_list = []
-#
-#     for i in range(block_len):
-#
-#         tmp=qry
-#         for k in ks:
-#
-#             if '@'+k in tmp:
-#
-#                 if not yam_struct[k][i]:
-#                     tmp=tmp.replace('@'+k, "''")
-#                 else:
-#                     tmp = tmp.replace('@' + k, str(yam_struct[k][i]))
-#
-#         # append to make larger list of queries
-#         qry_list.append(tmp)
-#
-#     if show:
-#         for q in qry_list:
-#             print(q)
-#
-#     return qry_list
 
 def MakeStrings(src, targ, show=False):
 
@@ -1267,13 +1238,16 @@ def addXText(conf, xtext):
         tmp=xtext.values
         r, c=tmp.shape
         if c==1:
-            xtext=xtext.values
+            xtext = xtext.values[:,0]
+
         else:
             xtext = xtext.values[0]
 
+
         # make everythiong strings
         xticks=[str(i) for i in conf['xticks']]
-        xtext = [str(i) for i in list(xtext)]
+        #xtext = [str(i) for i in list(xtext)]
+        xtext = [str(i) for i in xtext]
 
         sep_left=conf['xsep'][0]
         sep_right=conf['xsep'][1]
@@ -1457,7 +1431,8 @@ def displayCaption(src, targ, df, defaults=False, direction_flags=None, directio
     :param defaults: default yaml configuration
     :param direction_flags: binary flags in df format. Mapped to yaml configuration direction_map
     :param direction_map: yaml config dict to map binary values to english staements (eg., True: Higher than)
-    :return: markdown object to display list of replaced strings
+    :return: markdown object to display list of replaced st
+    rings
     """
 
     # deal with main df
