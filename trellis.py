@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>
 """
 
-
 import yaml
 import pandas as pd
 import numpy as np
@@ -30,6 +29,8 @@ import re
 import csv
 import glob
 from IPython.display import Markdown
+from IPython import display
+import time
 from scipy import stats
 
 def saveSwapFile(destPath, destFname, srcPath, srcFname, col_name, show=True):
@@ -161,7 +162,7 @@ def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, path_to_jup, toPD
         #print(nb_fname, newStr)
         #os.system('jupyter nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
         exstr=path_to_jup + ' nbconvert --to notebook --execute ' + nb_fname[0:-6] + '_' + newStr + '.ipynb --output ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
-        #print(exstr)
+        print(exstr)
         call(exstr, shell=True, executable='/bin/bash')
 
         if toPDF:
@@ -170,8 +171,8 @@ def batchConvert(toStrings_fname, nb_fname, fpath, append_ind, path_to_jup, toPD
         if toHTML:
             #os.system('jupyter nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb')
 
-            exstr='path_to_jup nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
-            #print(exstr)
+            exstr=path_to_jup + ' nbconvert --to html ' + nb_fname[0:-6] + '_' + newStr + '.ipynb'
+            print(exstr)
             call(exstr,
                  shell=True, executable='/bin/bash')
 
@@ -266,7 +267,7 @@ def runQuery(query, connect, axis=0, show=False, join_on=False):
 
     return df
 
-def makeFig(df, conf, fig=None, defaults=None, legtext=False, pos=111):
+def make_chart(df, conf, fig=None, defaults=None, legtext=False, pos=111):
 
     # merge with possible python dict
     if defaults:
@@ -285,6 +286,9 @@ def makeFig(df, conf, fig=None, defaults=None, legtext=False, pos=111):
         df=roundFrame(conf,df)
 
     # figure options
+    if conf['chart'] == 'donut':
+        plotDonut(df, conf, fig, pos=pos)
+
     if conf['chart'] == 'bar':
         plotBar(df, conf, fig, pos=pos)
 
@@ -296,7 +300,6 @@ def makeFig(df, conf, fig=None, defaults=None, legtext=False, pos=111):
 
     if conf['chart'] == 'clust_bar':
         plotClustBar(df, conf, fig, pos=pos, legtext=legtext)
-        #fig = plotClustBar(df, conf, fig, pos=pos, legtext=legtext)
 
     if conf['chart'] == 'stacked_bar':
         y_text_obj=plotStackedBar(df, conf, fig, pos=pos)
@@ -304,75 +307,78 @@ def makeFig(df, conf, fig=None, defaults=None, legtext=False, pos=111):
     # return fig object
     return y_text_obj
 
-def makeSubFig(df_list, dict_list, pos_list, defaults=None, legtext_list=False):
-    #makeSubFig(df_list, dict_list, pos_list, defaults=None, xtext_list=False, legtext_list=False)
+def make_charts(data, conf, defaults=None, legtext_list=False):
+    #make_charts(data, configuration, pos_list=None, defaults=None, legtext_list=False)
 
     """
     give lists of dataframes, yaml configs, subplot positions, etc...
     wraps around makeFig to produce subplots
 
-    :param df_list:
-    :param dict_list:
-    :param pos_list:
+    :param data:
+    :param conf:
     :param defaults:
     :param legtext_list:
     :param legtext_list:
     :return:
     """
-
-    #print(yam_list[0])
-    conf = dict_list[0]
-
-    if defaults:
-        conf = {**defaults, **conf}
-
-    # build canvas and add super annotations (xlabel, etc)
-    fig = plt.figure(figsize=conf['par_figsize'])
-    ax=fig.add_subplot(111,frameon=False)
-
-    # setting title and optional positions
-    m=1000 # here so that title padding behaves similar to axis label padding
-    fig.suptitle(conf['par_title'], fontsize=conf['par_title_fontsize'], y=.98+(conf['par_title_pad']/m))
-    plt.xlabel(conf['par_xlabel'], fontsize=conf['par_xlabel_fontsize'], labelpad=conf['par_xlabel_pad'])
-    plt.ylabel(conf['par_ylabel'], fontsize=conf['par_ylabel_fontsize'], labelpad=conf['par_ylabel_pad'])
-    #plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
-    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-
-
+    # check for multi or single chart
     res=[]
+    if type(data) is list:
 
-    for df, conf_dict, pos in zip(df_list, dict_list, pos_list):
-        res=makeFig(df, conf_dict, fig=fig, defaults=defaults, pos=pos, legtext=legtext_list)
-        #res = makeFig(df, conf_dict, fig=fig, defaults=defaults, pos=pos, xtext=xtext_list, legtext=legtext_list)
+        #conf = configuration
+        #conf = configuration[0]
 
-    # add a super legend to the canvas
-    legpatch=[]
-    if conf['par_legend']:
+        if defaults:
+            conf = {**defaults, **conf}
 
-        for labs, cols in zip(conf['par_legend'], conf['par_legend_color']):
-            legpatch.append(mpatches.Patch(label=labs, color=cols))
+        # build canvas and add super annotations (xlabel, etc)
+        fig = plt.figure(figsize=conf['par_figsize'])
+        ax=fig.add_subplot(111,frameon=False)
 
-        ax.legend(handles=legpatch,loc=(1.04, .736), fontsize=conf['par_legend_fontsize'])
-        # plt.legend(patches_tuple, labels_tuple, loc=(1.04, .736), fontsize=parconf['legend_fontsize'])
+        m=1000 # here so that title padding behaves similar to axis label padding
+        fig.suptitle(conf['par_title'], fontsize=conf['par_title_fontsize'], y=.98+(conf['par_title_pad']/m))
+        plt.xlabel(conf['par_xlabel'], fontsize=conf['par_xlabel_fontsize'], labelpad=conf['par_xlabel_pad'])
+        plt.ylabel(conf['par_ylabel'], fontsize=conf['par_ylabel_fontsize'], labelpad=conf['par_ylabel_pad'])
+        plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+
+        # to control subplot layouts
+        if conf['auto_chart_layout']:
+            pos_list=get_chart_positions(len(data), 2)
+
+        else:
+            pos_list=conf['chart_layout']
+
+        # to auto x tick labels
+        if conf['auto_xticks_layout']:
+            conf['xticks'] = get_xtick_positions(len(data), 2, conf['xticks'])
+
+        # to make the separated configurations
+        conf_list=make_dict_list(conf)
+
+        #for df, conf_dict, pos in zip(data, configuration, pos_list):
+        for df, conf_dict, pos in zip(data, conf_list, pos_list):
+            res=make_chart(df, conf_dict, fig=fig, defaults=defaults, pos=pos, legtext=legtext_list)
+
+        legpatch=[]
+        if conf['par_legend']:
+
+            for labs, cols in zip(conf['par_legend'], conf['par_legend_color']):
+                legpatch.append(mpatches.Patch(label=labs, color=cols))
+
+            ax.legend(handles=legpatch,loc=(1.04, .736), fontsize=conf['par_legend_fontsize'])
+
+    elif type(data) is pd.DataFrame:
+        res=make_chart(data, conf, fig=None, defaults=defaults, pos=111, legtext=False)
 
 
     return res
 
 def readConfig(conf, defaults=None):
 
-    #conf = yaml.load(yam)
-
     if defaults:
-        #opts = yaml.load(defaults)
-
-        #ks = list(conf.keys())  # get new set of keys
 
         # merge defaults with user specified options
-        # nconf={}
         conf = {**defaults, **conf}
-
-        #if 'axis' not in ks:
-        #    conf['axis'] = opts['axis']
 
     else:
         defaults = dict(
@@ -438,19 +444,42 @@ def readConfig(conf, defaults=None):
             marker_alpha=.5
         )
 
-        # give configuration some standard defaults
-        #opts = yaml.load(defaults)
-
-        ks = list(conf.keys())  # get new set of keys
-
-        # merge defaults with user specified options
-        # nconf={}
         conf = {**defaults, **conf}
 
-        #if 'axis' not in ks:
-        #    conf['axis'] = defaults['axis']
-
     return conf
+
+def plotDonut(df, conf, fig, pos=111):
+
+    #print(df)
+    # shape of dataframe
+    nrow=df.shape[0]
+
+    # get y
+    if nrow == 1:
+
+        y=df.values[0]
+
+    # allow df to be n rows and 1 column
+    elif nrow > 1:
+
+        # rearrange row oriented df into a list
+        y = df.values[:, 0]
+
+    ax = fig.add_subplot(pos)  # give access to axis properties
+
+    # Create a circle for the center of the plot
+    my_circle = plt.Circle((0, 0), 0.7, color='white')
+
+    # add any suffix to the string labels
+    lab_y = [str(x) + conf['segment_suffix'] for x in y]
+
+    # Custom wedges
+    patch, texts = ax.pie(y, labels=lab_y, wedgeprops={'linewidth': 7, 'edgecolor': 'white'}, labeldistance=1.02, colors=conf['color'])
+    ax.axis('equal')
+    [x.set_fontsize(conf['label_fontsize']) for x in texts]
+    [x.set_color(conf['text_color']) for x in texts]
+    ax.add_artist(my_circle)
+    plt.title(conf['title'], fontsize=conf['title_fontsize'], y=conf['title_pad'])
 
 def plotBar(df, conf, fig, pos=111):
 
@@ -911,6 +940,7 @@ def plotStackedBar(df, conf, fig, pos=111):
     return y_text_obj
 
 def benchMark(conf,x,y):
+    #print(conf, x, y)
 
     # make benchmark an array if it is not
     if type(conf['bench_data']) is not list:
@@ -1086,6 +1116,7 @@ def MakeDicts(src, targ, show=False):
         tmp=targ.copy()
         for k in ks:
 
+            #print(tmp)
             tmp[k]=src[k][i]
             #print(tmp[k])
 
@@ -1432,12 +1463,10 @@ def displayCaption(src, targ, df, defaults=False, direction_flags=None, directio
 
     # deal with main df
     # convert to dataframe
-    if not isinstance(df, pd.core.frame.DataFrame):
+    if type(df) is not pd.DataFrame:
         df=pd.DataFrame(df)
 
-    #print(src)
     conf = readConfig(src, defaults=defaults)
-    #print(conf)
 
     # deal with nans
     if conf['zeronan']:
@@ -1448,23 +1477,18 @@ def displayCaption(src, targ, df, defaults=False, direction_flags=None, directio
 
     arr=df.values
 
-    # deal with df containing flags if it exists
-    # using_direction=False
     if direction_flags is not None and direction_map is not None:
 
         using_direction=True
 
-        # convert to dataframe
-        if not isinstance(direction_flags, pd.core.frame.DataFrame):
+        if type(direction_flags) is not pd.DataFrame:
             direction_flags=pd.DataFrame(direction_flags)
 
-        # same for flags
         rows, cols= direction_flags.shape
         if rows==1:
             direction_flags=direction_flags.transpose()
 
         dir_vals = direction_flags.values
-
 
         list_block = MakeStrings(src, targ)
         md=''
@@ -1477,15 +1501,10 @@ def displayCaption(src, targ, df, defaults=False, direction_flags=None, directio
                 cur_dir=dir_vals[ind][0]
                 map_text=direction_map[cur_dir]
 
-                #if cur_num !=0:
                 cur_string=cur_string.replace('@number', str(cur_num))
                 cur_string = cur_string.replace('@direction', map_text)
-                #else:
 
-                    # say noting if value is zero
-                #    pass
             else:
-                # check for '@direction' to make values absolute and add directional text before value
                 cur_num = arr[ind][0]
                 cur_string=cur_string.replace('@number', str(cur_num))
 
@@ -1495,3 +1514,70 @@ def displayCaption(src, targ, df, defaults=False, direction_flags=None, directio
 
         md = Markdown(md)
         return md
+
+def get_chart_positions(num_charts, modulo):
+
+    t = num_charts
+
+    if t % modulo == 0:
+        r = int(t / modulo)
+        pos = []
+        for i in range(t):
+            s = f"{r}{modulo}{i+1}"
+            pos.append(s)
+
+        pos_list = [int(x) for x in pos]
+
+    else:
+
+        r = int(np.ceil(t / 2))
+        pos = []
+        for i in range(t):
+            s = f"{r}{modulo}{i+1}"
+            pos.append(s)
+
+        pos_list = [int(x) for x in pos]
+
+    return pos_list
+
+def get_xtick_positions(num_charts, modulo, xvect):
+
+    t = num_charts
+
+    if t % modulo == 0:
+        xticks = [''] * (t - modulo) + [xvect] * modulo
+
+    else:
+        xticks = [''] * (t - 1) + [xvect]
+
+    return xticks
+
+def make_dict_list(configuration):
+
+    conf_list = []
+    sep_key = str(configuration['separate'][0])
+    len_block = len(configuration[sep_key])
+    if configuration['separate']:
+
+        for i in range(len_block):
+
+            tmp_conf = configuration.copy()
+            for k in configuration['separate']:
+                tmp_conf[k] = configuration[k][i]
+
+            conf_list.append(tmp_conf)
+
+    return conf_list
+
+def show_example(opt):
+
+    conf={'chart': 'bar'}
+
+    for i in range(10):
+        plt.clf()
+        plt.plot(np.random.rand(3), np.random.rand(3))
+        print(f'{opt} = {i}')
+        display.display(plt.gcf())
+        display.clear_output(wait=True)
+        time.sleep(.5)
+    print(f'{opt} = {i}')
